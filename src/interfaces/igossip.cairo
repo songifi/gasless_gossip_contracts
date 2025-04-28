@@ -11,4 +11,19 @@ pub trait iGossip<TContractState> {
     fn is_address_registered(ref self: TContractState, address: ContractAddress) -> bool;
     fn get_profile_hash(self: @TContractState, address: ContractAddress) -> felt252;
 }
+use crate::message::MessageStore::Message;
 
+#[starknet::interface]
+pub trait iMessage<TContractState> {
+    fn send_message(ref self: TContractState, to: ContractAddress, content_hash: felt252);
+    fn get_messages_between(
+        self: @TContractState, user1: ContractAddress, user2: ContractAddress,
+    ) -> Array<Message>;
+    fn get_message_count(
+        self: @TContractState, user1: ContractAddress, user2: ContractAddress,
+    ) -> u256;
+    fn get_message_at_index(
+        self: @TContractState, user1: ContractAddress, user2: ContractAddress, index: u256,
+    ) -> Message;
+    fn get_user_registry(self: @TContractState) -> ContractAddress;
+}
