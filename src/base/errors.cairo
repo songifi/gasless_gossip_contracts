@@ -6,4 +6,6 @@ pub mod Errors {
     pub const ERROR_UNAUTHORIZED: felt252 = 'Only owner can update profile';
     pub const ERROR_ZERO_ADDRESS: felt252 = 'Zero address not allowed';
     pub const ERROR_USERNAME_NOT_FOUND: felt252 = 'Username not found';
+    pub const ERROR_TOKEN_NOT_SET: felt252 = 'Token contract not set';
+    pub const ERROR_INSUFFICIENT_ALLOWANCE: felt252 = 'Insufficient token allowance';
 }
