@@ -1,24 +1,34 @@
 use core::array::{Array, ArrayTrait};
 use core::starknet::get_caller_address;
 use core::starknet::storage::{StorageMap, StoragePointerReadAccess, StoragePointerWriteAccess};
-use starknet::ContractAddress;
+use starknet::{ContractAddress, ClassHash};
 use crate::base::errors::Errors::{
     ERROR_INVALID_NONCE, ERROR_INVALID_SIGNATURE, ERROR_UNAUTHORIZED, ERROR_ZERO_ADDRESS,
 };
 use crate::interfaces::igasless_relayer::iGaslessRelayer;
+use crate::proxy::proxy_implementation::{IUpgradeable, upgradeable_component};
 
 #[starknet::contract]
 mod GaslessRelayer {
     use super::{
-        Array, ArrayTrait, ContractAddress, ERROR_INVALID_NONCE, ERROR_INVALID_SIGNATURE,
+        Array, ArrayTrait, ContractAddress, ClassHash, ERROR_INVALID_NONCE, ERROR_INVALID_SIGNATURE,
         ERROR_UNAUTHORIZED, ERROR_ZERO_ADDRESS, StorageMap, StoragePointerReadAccess,
         StoragePointerWriteAccess, get_caller_address, iGaslessRelayer,
+        IUpgradeable, upgradeable_component,
     };
+
+    // Component for upgradeability
+    component!(path: upgradeable_component, storage: upgradeable, event: UpgradeableEvent);
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl = upgradeable_component::UpgradeableImpl<ContractState>;
 
     const RELAYER_ROLE: felt252 = 1;
 
     #[storage]
     struct Storage {
+        #[substorage(v0)]
+        upgradeable: upgradeable_component::Storage,
         nonces: StorageMap<ContractAddress, felt252>,
         relayers: StorageMap<ContractAddress, bool>,
     }
@@ -26,6 +36,8 @@ mod GaslessRelayer {
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
+        #[flat]
+        UpgradeableEvent: upgradeable_component::Event,
         MetaTxExecuted: MetaTxExecuted,
         RelayerAdded: RelayerAdded,
         RelayerRemoved: RelayerRemoved,
@@ -51,8 +63,25 @@ mod GaslessRelayer {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState) {
+    fn constructor(
+        ref self: ContractState, 
+        admin: ContractAddress,
+        implementation: ClassHash
+    ) {
+        // Initialize the upgradeable component with admin and implementation
+        self.upgradeable.initializer(admin, implementation);
+        
         // Grant admin role to deployer
+        let caller = get_caller_address();
+        assert(!caller.is_zero(), ERROR_ZERO_ADDRESS);
+        self.relayers.write(caller, true);
+        self.emit(RelayerAdded { relayer: caller, sender: caller });
+    }
+
+    #[external(v0)]
+    fn initialize(ref self: ContractState) {
+        // This function is called during proxy initialization
+        // Here we set up the initial state of the contract
         let caller = get_caller_address();
         assert(!caller.is_zero(), ERROR_ZERO_ADDRESS);
         self.relayers.write(caller, true);
@@ -73,7 +102,7 @@ mod GaslessRelayer {
 
             // Get and verify nonce
             let nonce = self.nonces.read(user);
-            assert(nonce == function_data.at(0), ERROR_INVALID_NONCE);
+            assert(nonce == *function_data.at(0), ERROR_INVALID_NONCE);
             self.nonces.write(user, nonce + 1);
 
             // Verify signature
@@ -114,4 +143,3 @@ mod GaslessRelayer {
         }
     }
 }
-

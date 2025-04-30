@@ -13,7 +13,6 @@ pub mod gossip {
     };
     use crate::interfaces::igossip::iGossip;
 
-
     // User struct
     #[derive(Drop, Serde, PartialEq, starknet::Store, Clone)]
     pub struct User {
@@ -22,14 +21,15 @@ pub mod gossip {
         timestamp: u64 // Registration timestamp
     }
 
-    // Storage
+    // Storage - IMPORTANT: Must match the storage layout in the proxy
     #[storage]
     struct Storage {
-        // Map username to address
+        // Proxy contract fields (must be maintained even if not used directly)
+        implementation_hash: starknet::class_hash::ClassHash,
+        admin: ContractAddress,
+        // Original contract storage
         username_to_address: Map<felt252, ContractAddress>,
-        // Map address to User struct
         address_to_user: Map<ContractAddress, User>,
-        // Track registered addresses
         is_registered: Map<ContractAddress, bool>,
     }
 
@@ -56,6 +56,8 @@ pub mod gossip {
         new_profile_hash: felt252,
     }
 
+    // No constructor in implementation contract
+    // The state is maintained by the proxy
 
     #[abi(embed_v0)]
     impl gossipIml of iGossip<ContractState> {
@@ -113,12 +115,13 @@ pub mod gossip {
                     ),
                 );
         }
-        // Get user information by address
+        //Get user information by address
         fn get_user_by_address(self: @ContractState, address: ContractAddress) -> User {
             let user = self.address_to_user.read(address);
             assert(!user.username.is_zero(), ERROR_NOT_REGISTERED);
             user
         }
+
 
         // Get address by username
         fn get_address_by_username(self: @ContractState, username: felt252) -> ContractAddress {
