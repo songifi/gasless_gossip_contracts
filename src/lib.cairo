@@ -12,4 +12,4 @@ pub mod gossip;
 pub mod tipping;
 pub mod mock_erc20;
 pub mod message;
-pub mod wallet;
+pub mod group_chat;pub mod wallet;
