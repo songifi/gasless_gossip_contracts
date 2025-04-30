@@ -8,10 +8,9 @@ pub mod Errors {
     pub const ERROR_USERNAME_NOT_FOUND: felt252 = 'Username not found';
     pub const ERROR_TOKEN_NOT_SET: felt252 = 'Token contract not set';
     pub const ERROR_INSUFFICIENT_ALLOWANCE: felt252 = 'Insufficient token allowance';
-
-
     pub const ERROR_SELF_MESSAGE: felt252 = 'Cannot message self';
-
     pub const ERROR_INVALID_RECEIVER: felt252 = 'Invalid receiver';
     pub const ERROR_EMPTY_CONTENT: felt252 = 'Empty content hash';
+    pub const ERROR_INVALID_SIGNATURE: felt252 = 'Invalid signature';
+    pub const ERROR_INVALID_NONCE: felt252 = 'Invalid nonce';
 }
