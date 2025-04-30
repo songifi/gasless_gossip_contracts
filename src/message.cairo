@@ -7,15 +7,12 @@ pub mod MessageStore {
         Map, StorageMapReadAccess, StorageMapWriteAccess, StoragePointerReadAccess,
         StoragePointerWriteAccess,
     };
-    use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
+    use starknet::{ContractAddress, get_block_timestamp, get_caller_address, class_hash::ClassHash};
     use crate::base::errors::Errors::{
         ERROR_ADDRESS_REGISTERED, ERROR_EMPTY_CONTENT, ERROR_INVALID_RECEIVER, ERROR_NOT_REGISTERED,
         ERROR_SELF_MESSAGE, ERROR_UNAUTHORIZED, ERROR_USERNAME_LENGTH, ERROR_USERNAME_NOT_FOUND,
         ERROR_USERNAME_TAKEN, ERROR_ZERO_ADDRESS,
     };
-
-
-    // Import UserRegistry interface for validation
     use crate::interfaces::igossip::iMessage;
 
     #[derive(Copy, Drop, Serde, starknet::Store)]
@@ -43,24 +40,23 @@ pub mod MessageStore {
 
     #[storage]
     struct Storage {
-        // User registry contract address
+        // Proxy-specific storage (must be maintained even if not used directly)
+        implementation_hash: ClassHash,
+        admin: ContractAddress,
+        
+        // Original contract storage
         user_registry: ContractAddress,
-        // Message counter for generating unique IDs
         message_counter: u256,
-        // Messages stored by conversation ID and message ID
-        // conversation_id = hash(min(user1, user2), max(user1, user2))
         messages: Map<(felt252, u256), Message>,
-        // Number of messages in a conversation
         conversation_message_count: Map<felt252, u256>,
-        // User's conversations
         user_conversations: Map<ContractAddress, Array<felt252>>,
     }
 
+    // Add constructor back for testing purposes
     #[constructor]
     fn constructor(ref self: ContractState, user_registry_address: ContractAddress) {
-        assert(!user_registry_address.is_zero(), ERROR_ZERO_ADDRESS);
         self.user_registry.write(user_registry_address);
-        self.message_counter.write(0);
+        self.message_counter.write(0); // Initialize counter
     }
 
     #[abi(embed_v0)]
@@ -183,7 +179,6 @@ pub mod MessageStore {
             self.user_registry.read()
         }
     }
-
 
     #[generate_trait]
     impl private of PrivateTrait {
